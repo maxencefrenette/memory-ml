@@ -10,6 +10,7 @@ readme = "README.md"
 python = "^3.12"
 pandas = "^2.2.0"
 ipykernel = "^6.29.0"
+matplotlib = "^3.8.2"
 
 
 [tool.poetry.group.dev.dependencies]
