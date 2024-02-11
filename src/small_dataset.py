@@ -4,6 +4,12 @@ from math import log
 from torch.utils.data import Dataset
 import torch
 from typing import Tuple
+import lightning as L
+from torch.utils.data import DataLoader, random_split
+
+train_size = 0.7
+val_size = 0.1
+test_size = 0.2
 
 
 def load_as_df() -> pd.DataFrame:
@@ -101,3 +107,27 @@ class ReviewsDataset(Dataset):
             ),
             torch.tensor([rating], dtype=torch.float32),
         )
+
+
+class ReviewsDataModule(L.LightningDataModule):
+    def __init__(self, batch_size: int, num_past_reviews: int):
+        super().__init__()
+        self.batch_size = batch_size
+        self.num_past_reviews = num_past_reviews
+
+    def setup(self, stage: str = None):
+        dataset = ReviewsDataset(self.num_past_reviews)
+        self.train_set, self.val_set, self.test_set = random_split(
+            dataset, [train_size, val_size, test_size]
+        )
+
+    def train_dataloader(self) -> DataLoader:
+        return torch.utils.data.DataLoader(
+            self.train_set, batch_size=self.batch_size, shuffle=True
+        )
+
+    def val_dataloader(self) -> DataLoader:
+        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+
+    def test_dataloader(self) -> DataLoader:
+        return torch.utils.data.DataLoader(self.test_set, batch_size=self.batch_size)
