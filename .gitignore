@@ -163,3 +163,4 @@ cython_debug/
 # Project-specific ignores
 .DS_Store
 data/
+lightning_logs/
