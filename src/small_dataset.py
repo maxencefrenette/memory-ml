@@ -7,8 +7,8 @@ from typing import Tuple
 import lightning as L
 from torch.utils.data import DataLoader, random_split
 
-train_size = 0.7
-val_size = 0.1
+train_size = 0.75
+val_size = 0.05
 test_size = 0.2
 
 
@@ -127,7 +127,7 @@ class ReviewsDataModule(L.LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return DataLoader(self.val_set, batch_size=self.batch_size)
 
     def test_dataloader(self) -> DataLoader:
         return torch.utils.data.DataLoader(self.test_set, batch_size=self.batch_size)
