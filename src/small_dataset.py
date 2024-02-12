@@ -112,22 +112,23 @@ class ReviewsDataset(Dataset):
 class ReviewsDataModule(L.LightningDataModule):
     def __init__(self, batch_size: int, num_past_reviews: int):
         super().__init__()
-        self.batch_size = batch_size
-        self.num_past_reviews = num_past_reviews
+        self.save_hyperparameters()
 
     def setup(self, stage: str = None):
-        dataset = ReviewsDataset(self.num_past_reviews)
+        dataset = ReviewsDataset(self.hparams.num_past_reviews)
         self.train_set, self.val_set, self.test_set = random_split(
             dataset, [train_size, val_size, test_size]
         )
 
     def train_dataloader(self) -> DataLoader:
         return torch.utils.data.DataLoader(
-            self.train_set, batch_size=self.batch_size, shuffle=True
+            self.train_set, batch_size=self.hparams.batch_size, shuffle=True
         )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val_set, batch_size=self.batch_size)
+        return DataLoader(self.val_set, batch_size=self.hparams.batch_size)
 
     def test_dataloader(self) -> DataLoader:
-        return torch.utils.data.DataLoader(self.test_set, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(
+            self.test_set, batch_size=self.hparams.batch_size
+        )
