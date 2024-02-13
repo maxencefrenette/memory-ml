@@ -56,9 +56,9 @@ class ReviewsDataset(Dataset):
         - past_delta_t: the time since the past review
     """
 
-    def __init__(self, num_past_reviews: int) -> None:
+    def __init__(self, reviews_history_size: int) -> None:
         self.df = load_as_df()
-        self.num_past_reviews = num_past_reviews
+        self.reviews_history_size = reviews_history_size
 
     def __len__(self) -> int:
         return len(self.df)
@@ -71,7 +71,7 @@ class ReviewsDataset(Dataset):
         rating = 0 if row["rating"] == 1 else 1
 
         past_reviews = []
-        for i in range(1, self.num_past_reviews + 1):
+        for i in range(1, self.reviews_history_size + 1):
             past_row = self.df.iloc[index - i]
 
             if past_row["user"] != row["user"] or past_row["card_id"] != row["card_id"]:
@@ -110,12 +110,13 @@ class ReviewsDataset(Dataset):
 
 
 class ReviewsDataModule(L.LightningDataModule):
-    def __init__(self, batch_size: int, num_past_reviews: int):
+
+    def __init__(self, batch_size: int, reviews_history_size: int):
         super().__init__()
         self.save_hyperparameters()
 
     def setup(self, stage: str = None):
-        dataset = ReviewsDataset(self.hparams.num_past_reviews)
+        dataset = ReviewsDataset(self.hparams.reviews_history_size)
         self.train_set, self.val_set, self.test_set = random_split(
             dataset, [train_size, val_size, test_size]
         )
