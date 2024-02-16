@@ -26,9 +26,8 @@ def load_as_df() -> pd.DataFrame:
     # Read each CSV file into a DataFrame and append it to the list
     for file in csv_files:
         df = pd.read_csv(file)
-        df["user"] = file.split("/")[-1].split(".")[
-            0
-        ]  # Extract the user name from the file path
+        # Extract the user name from the file path and add it as a column to the DataFrame
+        df["user"] = int(file.split("/")[-1].split(".")[0])
         dfs.append(df)
 
     # Concatenate all the DataFrames in the list
@@ -71,8 +70,8 @@ class ReviewsDataset(Dataset):
         row = self.df.iloc[index]
 
         delta_t_is_null = int(row["delta_t"] == -1)
-        delta_t = log(1 + row["delta_t"]) if not delta_t_is_null else 0
-        rating = 0 if row["rating"] == 1 else 1
+        delta_t = self._delta_t_transform(row["delta_t"]) if not delta_t_is_null else 0
+        rating = self._rating_transform(row["rating"])
 
         past_reviews = []
         for i in range(1, self.reviews_history_size + 1):
@@ -90,10 +89,12 @@ class ReviewsDataset(Dataset):
                 continue
 
             past_rating_is_null = 0
-            past_rating = 0 if past_row["rating"] == 1 else 1
+            past_rating = self._rating_transform(past_row["rating"])
             past_delta_t_is_null = int(past_row["delta_t"] == -1)
             past_delta_t = (
-                log(1 + past_row["delta_t"]) if not past_delta_t_is_null else 0
+                self._delta_t_transform(past_row["delta_t"])
+                if not past_delta_t_is_null
+                else 0
             )
 
             past_reviews.append(
@@ -111,6 +112,12 @@ class ReviewsDataset(Dataset):
             ),
             torch.tensor([rating], dtype=torch.float32),
         )
+
+    def _rating_transform(self, rating: int) -> int:
+        return 0 if rating == 1 else 1
+
+    def _delta_t_transform(self, delta_t: int) -> float:
+        return log(1 + delta_t)
 
 
 class ReviewsDataModule(L.LightningDataModule):
