@@ -13,6 +13,7 @@ test_size = 0.5
 
 # Use a larger batch size for validation and testing because it doesn't affect the model's performance
 test_batch_size = 8192
+num_workers = 4
 
 
 def load_as_df() -> pd.DataFrame:
@@ -113,7 +114,6 @@ class ReviewsDataset(Dataset):
 
 
 class ReviewsDataModule(L.LightningDataModule):
-
     def __init__(self, batch_size: int, reviews_history_size: int):
         super().__init__()
         self.save_hyperparameters()
@@ -126,11 +126,25 @@ class ReviewsDataModule(L.LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         return torch.utils.data.DataLoader(
-            self.train_set, batch_size=self.hparams.batch_size, shuffle=True
+            self.train_set,
+            batch_size=self.hparams.batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            persistent_workers=True,
         )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val_set, batch_size=test_batch_size)
+        return DataLoader(
+            self.val_set,
+            batch_size=test_batch_size,
+            num_workers=num_workers,
+            persistent_workers=True,
+        )
 
     def test_dataloader(self) -> DataLoader:
-        return torch.utils.data.DataLoader(self.test_set, batch_size=test_batch_size)
+        return torch.utils.data.DataLoader(
+            self.test_set,
+            batch_size=test_batch_size,
+            num_workers=num_workers,
+            persistent_workers=True,
+        )
