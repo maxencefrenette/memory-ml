@@ -5,16 +5,18 @@ from torchmetrics.classification import BinaryCalibrationError
 
 
 class NNMemoryModel(L.LightningModule):
-    def __init__(self, learning_rate: float, reviews_history_size: int):
+    def __init__(
+        self, learning_rate: float, reviews_history_size: int, hidden_size: int
+    ):
         super().__init__()
         self.save_hyperparameters()
 
         self.model = nn.Sequential(
-            nn.Linear(2 + 4 * reviews_history_size, 32),
+            nn.Linear(2 + 4 * reviews_history_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(32, 1),
+            nn.Linear(hidden_size, 1),
             nn.Sigmoid(),
         )
 
