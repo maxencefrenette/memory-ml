@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import lightning as L
+from torchmetrics.classification import BinaryCalibrationError
 
 
 class NeuralNetwork(nn.Module):
@@ -27,26 +28,28 @@ class NNMemoryModel(L.LightningModule):
         self.model = NeuralNetwork(
             reviews_history_size=self.hparams.reviews_history_size
         )
+
         self.loss_fn = nn.BCELoss()
+        self.calibration_fn = BinaryCalibrationError(n_bins=20, norm="l2")
 
     def training_step(self, batch, batch_idx):
         x, y = batch
         pred = self.model(x)
         loss = self.loss_fn(pred, y)
-        self.log("train_loss", loss)
+        self.log("train/loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
         pred = self.model(x)
-        loss = self.loss_fn(pred, y)
-        self.log("val_loss", loss)
+        self.log("val/loss", self.loss_fn(pred, y))
+        self.log("val/calibration", self.calibration_fn(pred, y))
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         pred = self.model(x)
-        loss = self.loss_fn(pred, y)
-        self.log("test_loss", loss)
+        self.log("test/loss", self.loss_fn(pred, y))
+        self.log("test/calibration", self.calibration_fn(pred, y))
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams.learning_rate)
