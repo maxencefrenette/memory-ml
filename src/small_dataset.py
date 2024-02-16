@@ -7,9 +7,12 @@ from typing import Tuple
 import lightning as L
 from torch.utils.data import DataLoader, random_split
 
-train_size = 0.75
+train_size = 0.45
 val_size = 0.05
-test_size = 0.2
+test_size = 0.5
+
+# Use a larger batch size for validation and testing because it doesn't affect the model's performance
+test_batch_size = 8192
 
 
 def load_as_df() -> pd.DataFrame:
@@ -127,9 +130,7 @@ class ReviewsDataModule(L.LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val_set, batch_size=self.hparams.batch_size)
+        return DataLoader(self.val_set, batch_size=test_batch_size)
 
     def test_dataloader(self) -> DataLoader:
-        return torch.utils.data.DataLoader(
-            self.test_set, batch_size=self.hparams.batch_size
-        )
+        return torch.utils.data.DataLoader(self.test_set, batch_size=test_batch_size)
