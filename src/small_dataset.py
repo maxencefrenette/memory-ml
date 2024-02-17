@@ -28,6 +28,8 @@ def load_as_df() -> pd.DataFrame:
         df = pd.read_csv(file)
         # Extract the user name from the file path and add it as a column to the DataFrame
         df["user"] = int(file.split("/")[-1].split(".")[0])
+        df["delta_t"] = df["delta_t"].replace(-1.0, None)
+        df["delta_t"] = df["delta_t"].replace(-1, None)
         dfs.append(df)
 
     # Concatenate all the DataFrames in the list
@@ -59,8 +61,8 @@ class ReviewsDataset(Dataset):
         - past_delta_t: the time since the past review
     """
 
-    def __init__(self, reviews_history_size: int) -> None:
-        self.df = load_as_df()
+    def __init__(self, reviews_history_size: int, df: pd.DataFrame) -> None:
+        self.df = df
         self.reviews_history_size = reviews_history_size
 
     def __len__(self) -> int:
@@ -69,28 +71,25 @@ class ReviewsDataset(Dataset):
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         row = self.df.iloc[index]
 
-        delta_t_is_null = int(row["delta_t"] == -1)
+        delta_t_is_null = pd.isna(row["delta_t"])
         delta_t = self._delta_t_transform(row["delta_t"]) if not delta_t_is_null else 0
         rating = self._rating_transform(row["rating"])
 
         past_reviews = []
         for i in range(1, self.reviews_history_size + 1):
+            if index - i < 0:
+                past_reviews.append([0, 0, 0, 0])
+                continue
+
             past_row = self.df.iloc[index - i]
 
             if past_row["user"] != row["user"] or past_row["card_id"] != row["card_id"]:
-                past_reviews.append(
-                    [
-                        1,
-                        0,
-                        1,
-                        0,
-                    ]
-                )
+                past_reviews.append([0, 0, 0, 0])
                 continue
 
-            past_rating_is_null = 0
+            past_rating_is_null = False
             past_rating = self._rating_transform(past_row["rating"])
-            past_delta_t_is_null = int(past_row["delta_t"] == -1)
+            past_delta_t_is_null = pd.isna(past_row["delta_t"])
             past_delta_t = (
                 self._delta_t_transform(past_row["delta_t"])
                 if not past_delta_t_is_null
@@ -99,16 +98,17 @@ class ReviewsDataset(Dataset):
 
             past_reviews.append(
                 [
-                    past_rating_is_null,
-                    past_rating,
-                    past_delta_t_is_null,
+                    int(not past_delta_t_is_null),
                     past_delta_t,
+                    int(not past_rating_is_null),
+                    past_rating,
                 ]
             )
 
         return (
             torch.tensor(
-                [delta_t_is_null, delta_t] + sum(past_reviews, []), dtype=torch.float32
+                sum(past_reviews[::-1], []) + [int(not delta_t_is_null), delta_t],
+                dtype=torch.float32,
             ),
             torch.tensor([rating], dtype=torch.float32),
         )
@@ -126,7 +126,8 @@ class ReviewsDataModule(L.LightningDataModule):
         self.save_hyperparameters()
 
     def setup(self, stage: str = None):
-        dataset = ReviewsDataset(self.hparams.reviews_history_size)
+        df = load_as_df()
+        dataset = ReviewsDataset(self.hparams.reviews_history_size, df)
         self.train_set, self.val_set, self.test_set = random_split(
             dataset, [train_size, val_size, test_size]
         )
