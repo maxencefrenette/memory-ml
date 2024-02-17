@@ -45,19 +45,19 @@ def test_data_load_one_past_review():
 def test_data_load_full():
     df = pd.DataFrame(
         {
-            "user": [1, 1, 1, 1],
-            "card_id": [1, 1, 1, 1],
-            "rating": [None, 3, 3, 1],
-            "delta_t": [None, None, 1, 2],
+            "user": [1, 1, 1],
+            "card_id": [1, 1, 1],
+            "rating": [3, 3, 1],
+            "delta_t": [None, 1, 2],
         }
     )
 
     dataset = ReviewsDataset(reviews_history_size=4, df=df)
 
-    assert len(dataset) == 4
-    assert str(dataset[3]) == snapshot(
+    assert len(dataset) == 3
+    assert str(dataset[2]) == snapshot(
         """\
-(tensor([0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 1.0000, 1.0000, 0.0000,
+(tensor([0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
         0.0000, 1.0000, 1.0000, 1.0000, 0.6931, 1.0000, 1.0000, 1.0000, 1.0986]), tensor([0.]))\
 """
     )

@@ -1,9 +1,10 @@
 import glob
 import pandas as pd
+import numpy as np
 from math import log
 from torch.utils.data import Dataset
 import torch
-from typing import Tuple
+from typing import Tuple, Union
 import lightning as L
 from torch.utils.data import DataLoader, random_split
 
@@ -87,22 +88,8 @@ class ReviewsDataset(Dataset):
                 past_reviews.append([0, 0, 0, 0])
                 continue
 
-            past_rating_is_null = False
-            past_rating = self._rating_transform(past_row["rating"])
-            past_delta_t_is_null = pd.isna(past_row["delta_t"])
-            past_delta_t = (
-                self._delta_t_transform(past_row["delta_t"])
-                if not past_delta_t_is_null
-                else 0
-            )
-
             past_reviews.append(
-                [
-                    int(not past_delta_t_is_null),
-                    past_delta_t,
-                    int(not past_rating_is_null),
-                    past_rating,
-                ]
+                self._past_review_transform(past_row["delta_t"], past_row["rating"])
             )
 
         return (
@@ -118,6 +105,18 @@ class ReviewsDataset(Dataset):
 
     def _delta_t_transform(self, delta_t: int) -> float:
         return log(1 + delta_t)
+
+    def _past_review_transform(
+        self, delta_t: Union[float, np.nan], rating: float
+    ) -> torch.Tensor:
+        delta_t_is_null = pd.isna(delta_t)
+
+        return [
+            int(not delta_t_is_null),
+            self._delta_t_transform(delta_t) if not delta_t_is_null else 0,
+            1,
+            self._rating_transform(rating),
+        ]
 
 
 class ReviewsDataModule(L.LightningDataModule):
