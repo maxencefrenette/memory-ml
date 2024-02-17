@@ -77,24 +77,23 @@ class ReviewsDataset(Dataset):
         rating = self._rating_transform(row["rating"])
 
         past_reviews = []
-        for i in range(1, self.reviews_history_size + 1):
-            if index - i < 0:
-                past_reviews.append([0, 0, 0, 0])
-                continue
-
-            past_row = self.df.iloc[index - i]
-
-            if past_row["user"] != row["user"] or past_row["card_id"] != row["card_id"]:
+        start_index = max(index - self.reviews_history_size, 0)
+        for past_row in self.df.iloc[start_index:index].itertuples():
+            if past_row.user != row["user"] or past_row.card_id != row["card_id"]:
                 past_reviews.append([0, 0, 0, 0])
                 continue
 
             past_reviews.append(
-                self._past_review_transform(past_row["delta_t"], past_row["rating"])
+                self._past_review_transform(past_row.delta_t, past_row.rating)
             )
+
+        padding = self.reviews_history_size - len(past_reviews)
 
         return (
             torch.tensor(
-                sum(past_reviews[::-1], []) + [int(not delta_t_is_null), delta_t],
+                (4 * padding * [0])
+                + sum(past_reviews, [])
+                + [int(not delta_t_is_null), delta_t],
                 dtype=torch.float32,
             ),
             torch.tensor([rating], dtype=torch.float32),
